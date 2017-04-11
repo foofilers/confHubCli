@@ -20,6 +20,8 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"github.com/Sirupsen/logrus"
+	"github.com/foofilers/confHubCli/confWriters"
+	"strings"
 )
 
 var configCmd = &cobra.Command{
@@ -30,33 +32,63 @@ var configCmd = &cobra.Command{
 	},
 }
 
+var formats = []string{"json", "structJson", "structXml","xml", "properties"}
+
 var getCmd = &cobra.Command{
-	Use: "get [appName] [appVersion]",
+	Use: "get [appName]",
 	Short:"Get application configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
+		if len(args) != 1 {
 			fmt.Println(cmd.UsageString())
 			os.Exit(-1)
 		}
 		cl := GetClient(cmd)
-		res, err := cl.GetConfigs(args[0], args[1], cmd.Flag("format").Value.String())
+		version := cmd.Flag("version").Value.String()
+		format := cmd.Flag("format").Value.String()
+		configs, err := cl.GetConfigs(args[0], version)
 		if err != nil {
 			logrus.Fatal(err)
 		}
+		switch format {
 
-		fmt.Println(res)
+		case "json":
+			jsonOut, err := confWriters.ConfToJson(configs, cmd.Flag("pretty").Value.String() == "true")
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			fmt.Println(string(jsonOut))
+		case "structJson":
+			jsonOut, err := confWriters.ConfToStructuredJson(configs, cmd.Flag("pretty").Value.String() == "true")
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			fmt.Println(string(jsonOut))
+		case "xml":
+			jsonOut, err := confWriters.ConfToStructuredXml(configs, cmd.Flag("pretty").Value.String() == "true")
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			fmt.Println(string(jsonOut))
+		case "properties":
+			for p, v := range configs {
+				fmt.Printf("%s=%s\n", p, v)
+			}
+		default:
+			logrus.Fatal("invalid format")
+		}
 	},
 }
 var putCmd = &cobra.Command{
-	Use: "put [appName] [appVersion] [key] [value]",
+	Use: "put [appName] [key] [value]",
 	Short:"Put application configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 4 {
+		if len(args) != 3 {
 			fmt.Println(cmd.UsageString())
 			os.Exit(-1)
 		}
+		version := cmd.Flag("version").Value.String()
 		cl := GetClient(cmd)
-		err := cl.SetValue(args[0], args[1], args[2], args[3])
+		err := cl.SetValue(args[0], version, args[1], args[2])
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -64,8 +96,11 @@ var putCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.Flags().StringP("format", "f", "json", "Output format [json,xml,properties]")
+	getCmd.Flags().String("version", "", "Application version (default: currentVersion) ")
+	getCmd.Flags().StringP("format", "f", "json", "Output format " + strings.Join(formats, ", "))
+	getCmd.Flags().Bool("pretty", false, "Pretty format")
 	configCmd.AddCommand(getCmd)
+	putCmd.Flags().String("version", "", "Application version (default: currentVersion) ")
 	configCmd.AddCommand(putCmd)
 	RootCmd.AddCommand(configCmd)
 
