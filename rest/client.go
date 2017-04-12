@@ -12,7 +12,7 @@ type ConfHubClient struct {
 	authorization string
 }
 
-func New(url, username, password string) *ConfHubClient {
+func NewConfHubClient(url, username, password string) *ConfHubClient {
 	return &ConfHubClient{Url:url, Username:username, Password:password}
 }
 

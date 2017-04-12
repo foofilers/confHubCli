@@ -20,78 +20,91 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"github.com/Sirupsen/logrus"
-	"strings"
 )
 
-var configCmd = &cobra.Command{
-	Use:   "config",
+// versionCmd represents the version command
+var versionCmd = &cobra.Command{
+	Use:   "version",
 	Short: "A brief description of your command",
+
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(cmd.UsageString())
 	},
 }
+var setVersionCmd = &cobra.Command{
+	Use:   "set [appName] [appVersion]",
+	Short: "Set a default application version",
 
-var formats = []string{"json", "flatJson", "xml", "flatXml", "properties"}
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 2 {
+			fmt.Println(cmd.UsageString())
+			os.Exit(-1)
+		}
+		cl := GetClient(cmd)
+		if err := cl.SetDefaultVersion(args[0], args[1]); err != nil {
+			logrus.Fatal(err)
+		}
+	},
+}
 
-var getConfigCmd = &cobra.Command{
-	Use: "get [appName]",
-	Short:"Get application configuration",
+var createVersionCmd = &cobra.Command{
+	Use:   "create [appName] [appVersion]",
+	Short: "Create a new app version",
+
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 2 {
+			fmt.Println(cmd.UsageString())
+			os.Exit(-1)
+		}
+		cl := GetClient(cmd)
+		if err := cl.AddVersion(args[0], args[1]); err != nil {
+			logrus.Fatal(err)
+		}
+	},
+}
+
+var copyVersionCmd = &cobra.Command{
+	Use:   "copy [appName] [srcVersion] [dstVersion]",
+	Short: "Create an application version",
+
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 3 {
+			fmt.Println(cmd.UsageString())
+			os.Exit(-1)
+		}
+		cl := GetClient(cmd)
+		if err := cl.CopyVersion(args[0], args[1], args[2]); err != nil {
+			logrus.Fatal(err)
+		}
+	},
+}
+
+var listVersionCmd = &cobra.Command{
+	Use:   "list [appName] ",
+	Short: "List application versions",
+
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			fmt.Println(cmd.UsageString())
 			os.Exit(-1)
 		}
 		cl := GetClient(cmd)
-		version := cmd.Flag("version").Value.String()
-		format := cmd.Flag("format").Value.String()
-		configs, err := cl.GetFormattedConfigs(args[0], version, format)
+		versions, err := cl.GetVersions(args[0]);
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		fmt.Println(configs)
-
-	},
-}
-var putValueCmd = &cobra.Command{
-	Use: "put [appName] [key] [value]",
-	Short:"Put application configuration",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 3 {
-			fmt.Println(cmd.UsageString())
-			os.Exit(-1)
-		}
-		version := cmd.Flag("version").Value.String()
-		cl := GetClient(cmd)
-		err := cl.SetValue(args[0], version, args[1], args[2])
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	},
-}
-
-var deleteValueCmd = &cobra.Command{
-	Use: "delete [appName] [key]",
-	Short:"Put application configuration",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			fmt.Println(cmd.UsageString())
-			os.Exit(-1)
-		}
-		version := cmd.Flag("version").Value.String()
-		cl := GetClient(cmd)
-		err := cl.DeleteValue(args[0], version, args[1])
-		if err != nil {
-			logrus.Fatal(err)
+		for _, v := range versions {
+			fmt.Println(v)
 		}
 	},
 }
 
 func init() {
-	configCmd.PersistentFlags().String("version", "", "Application version (default: currentVersion) ")
-	getConfigCmd.Flags().StringP("format", "f", "flatJson", "Output format " + strings.Join(formats, ", "))
-	getConfigCmd.Flags().Bool("pretty", false, "Pretty format")
-	configCmd.AddCommand(getConfigCmd)
-	configCmd.AddCommand(putValueCmd)
-	configCmd.AddCommand(deleteValueCmd)
-	RootCmd.AddCommand(configCmd)
+	versionCmd.AddCommand(createVersionCmd)
+	versionCmd.AddCommand(setVersionCmd)
+	versionCmd.AddCommand(copyVersionCmd)
+	versionCmd.AddCommand(listVersionCmd)
+
+	RootCmd.AddCommand(versionCmd)
+
 }

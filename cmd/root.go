@@ -86,7 +86,7 @@ func GetClient(cmd *cobra.Command) *rest.ConfHubClient {
 		password = cmd.Flag("password").Value.String()
 	}
 
-	return rest.New(cmd.Flag("server").Value.String(), cmd.Flag("username").Value.String(), password).Login()
+	return rest.NewConfHubClient(cmd.Flag("server").Value.String(), cmd.Flag("username").Value.String(), password).Login()
 }
 
 // initConfig reads in config file and ENV variables if set.
