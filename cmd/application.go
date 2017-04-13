@@ -74,7 +74,7 @@ var listCmd = &cobra.Command{
 			logrus.Fatalf("Error retrieving application: %s", err)
 		}
 		fmt.Println("[")
-		for _,app:=range apps {
+		for _, app := range apps {
 			out, err := json.Marshal(app)
 			if err != nil {
 				logrus.Fatalf("Error retrieving application: %s", err)
@@ -119,6 +119,25 @@ var deleteCmd = &cobra.Command{
 	},
 }
 
+var watchAppCmd = &cobra.Command{
+	Use:   "watch [appName]",
+	Short: "Watch application changes",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			cmd.Usage()
+			os.Exit(-1)
+		}
+		cli := GetClient(cmd)
+		watchCh, err := cli.WatchApp([]string{args[0]});
+		if err != nil {
+			logrus.Fatalf("Error adding application :%s", err)
+		}
+		for ch := range watchCh {
+			fmt.Printf("%+v\n", ch)
+		}
+	},
+}
+
 func init() {
 	applicationCmd.AddCommand(listCmd)
 	applicationCmd.AddCommand(createCmd)
@@ -126,6 +145,9 @@ func init() {
 
 	deleteCmd.Flags().BoolP("yes", "y", false, "Delete without ask")
 	applicationCmd.AddCommand(deleteCmd)
+
+	applicationCmd.AddCommand(watchAppCmd)
+
 
 	RootCmd.AddCommand(applicationCmd)
 
